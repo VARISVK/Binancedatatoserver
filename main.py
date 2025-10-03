@@ -78,36 +78,45 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 @st.cache_data(ttl=5)
-def get_klines_from_db(hours=24):
-    """Get klines from database"""
+def get_klines_from_api(limit=100):
+    """Get klines directly from Binance API"""
     try:
-        conn = sqlite3.connect(DB_PATH)
-        # Convert hours to milliseconds properly
-        cutoff_timestamp = int((datetime.now() - timedelta(hours=hours)).timestamp() * 1000)
+        import requests
+        url = "https://fapi.binance.com/fapi/v1/klines"
+        params = {
+            "symbol": "BTCUSDT",
+            "interval": "1m",
+            "limit": limit
+        }
         
-        query = """
-            SELECT timestamp, open, high, low, close, volume
-            FROM klines
-            WHERE timestamp >= ?
-            ORDER BY timestamp ASC
-        """
+        response = requests.get(url, params=params, timeout=10)
+        response.raise_for_status()
+        data = response.json()
         
-        df = pd.read_sql_query(query, conn, params=(cutoff_timestamp,))
-        conn.close()
-        
-        if not df.empty:
+        if data:
+            df = pd.DataFrame(data, columns=[
+                'timestamp', 'open', 'high', 'low', 'close', 'volume',
+                'close_time', 'quote_volume', 'trades', 'taker_buy_base',
+                'taker_buy_quote', 'ignore'
+            ])
+            
             df['Date'] = pd.to_datetime(df['timestamp'], unit='ms')
             df = df.rename(columns={
                 'open': 'Open',
-                'high': 'High',
+                'high': 'High', 
                 'low': 'Low',
                 'close': 'Close',
                 'volume': 'Volume'
             })
+            
+            # Convert to numeric
+            for col in ['Open', 'High', 'Low', 'Close', 'Volume']:
+                df[col] = pd.to_numeric(df[col])
+                
             return df[['Date', 'Open', 'High', 'Low', 'Close', 'Volume']]
         return pd.DataFrame()
     except Exception as e:
-        st.error(f"Error loading klines: {e}")
+        st.error(f"Error fetching klines from API: {e}")
         return pd.DataFrame()
 
 @st.cache_data(ttl=5)
@@ -366,9 +375,9 @@ def main():
             st.caption(f"Newest candle: {db_stats['newest_candle'].strftime('%Y-%m-%d %H:%M:%S')}")
     
     # Load data
-    with st.spinner(f"📡 Loading {display_name} data from database..."):
-        df = get_klines_from_db(hours=hours)
-        # Get liquidations for the same timeframe as candles
+    with st.spinner(f"📡 Loading {display_name} data from Binance API..."):
+        df = get_klines_from_api(limit=100)  # Get last 100 candles from API
+        # Get liquidations from database (still need WebSocket for this)
         liquidations_df = get_liquidations_from_db(hours=hours)
     
     if not df.empty:

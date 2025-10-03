@@ -264,31 +264,24 @@ def run_liquidation_websocket():
 
 def main():
     print("=" * 60)
-    print("BTC/USDT Data Collector - Background Service")
+    print("BTC/USDT Liquidation Collector - Background Service")
     print("=" * 60)
     
     # Initialize database
     print("Initializing database...")
     init_database()
     
-    # Fetch historical data first
-    print("\nFetching historical klines from Binance API...")
-    fetch_historical_klines(limit=1500)
-    
     print("\n" + "=" * 60)
-    print("Starting WebSocket streams...")
+    print("Starting Liquidation WebSocket stream...")
     print("=" * 60)
     
-    # Start WebSocket threads
-    kline_thread = threading.Thread(target=run_kline_websocket, daemon=True, name="KlineCollector")
+    # Start only liquidation WebSocket thread
     liq_thread = threading.Thread(target=run_liquidation_websocket, daemon=True, name="LiquidationCollector")
-    
-    kline_thread.start()
     liq_thread.start()
     
-    print("\n✅ Data collector is running!")
-    print("📊 Collecting klines (1-minute candles)")
-    print("💥 Collecting liquidations")
+    print("\n✅ Liquidation collector is running!")
+    print("💥 Collecting liquidations only")
+    print("📊 Klines now fetched directly from Binance API")
     print("\nPress Ctrl+C to stop...\n")
     
     try:
