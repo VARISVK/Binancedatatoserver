@@ -15,10 +15,12 @@ def run_data_collector():
     """Run data collector in background thread"""
     print("🚀 Starting data collector...")
     try:
-        # Run data_collector.py
-        subprocess.run([sys.executable, "data_collector.py"], check=True)
-    except subprocess.CalledProcessError as e:
-        print(f"❌ Data collector failed: {e}")
+        # Run data_collector.py with Popen to avoid blocking
+        process = subprocess.Popen([sys.executable, "data_collector.py"], 
+                                 stdout=subprocess.PIPE, 
+                                 stderr=subprocess.PIPE)
+        # Keep the process running
+        process.wait()
     except Exception as e:
         print(f"❌ Data collector error: {e}")
 

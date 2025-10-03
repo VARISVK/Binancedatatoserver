@@ -31,7 +31,12 @@ def start_data_collector():
         # Start data collector in background
         def run_collector():
             try:
-                subprocess.run(["python", "data_collector.py"], check=True)
+                # Use Popen instead of run to avoid blocking
+                process = subprocess.Popen(["python", "data_collector.py"], 
+                                         stdout=subprocess.PIPE, 
+                                         stderr=subprocess.PIPE)
+                # Keep the process running
+                process.wait()
             except Exception as e:
                 print(f"Data collector error: {e}")
         
@@ -40,7 +45,7 @@ def start_data_collector():
         _data_collector_started = True
         
         # Give it time to initialize
-        time.sleep(5)
+        time.sleep(10)
         
     except Exception as e:
         st.error(f"Failed to start data collector: {e}")
