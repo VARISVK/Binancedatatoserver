@@ -4,8 +4,46 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import sqlite3
 from datetime import datetime, timedelta, timezone
+import subprocess
+import threading
+import time
+import os
 
 DB_PATH = "btc_data.db"
+
+# Global variable to track if data collector is running
+_data_collector_started = False
+
+def start_data_collector():
+    """Start data collector in background if not already running"""
+    global _data_collector_started
+    
+    if _data_collector_started:
+        return
+    
+    try:
+        # Check if data collector is already running
+        status = get_collector_status()
+        if status and status['is_running']:
+            _data_collector_started = True
+            return
+        
+        # Start data collector in background
+        def run_collector():
+            try:
+                subprocess.run(["python", "data_collector.py"], check=True)
+            except Exception as e:
+                print(f"Data collector error: {e}")
+        
+        collector_thread = threading.Thread(target=run_collector, daemon=True)
+        collector_thread.start()
+        _data_collector_started = True
+        
+        # Give it time to initialize
+        time.sleep(5)
+        
+    except Exception as e:
+        st.error(f"Failed to start data collector: {e}")
 
 st.set_page_config(
     page_title="BTC/USDT Live Dashboard",
@@ -271,6 +309,9 @@ def create_candlestick_chart(df, liquidations_df, timeframe_name="1 Minute"):
     return fig
 
 def main():
+    # Auto-start data collector
+    start_data_collector()
+    
     # Header
     col1, col2, col3 = st.columns([3, 1, 1])
     

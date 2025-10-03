@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: btc-dashboard
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: python startup.py
+    envVars:
+      - key: PORT
+        value: 10000
+    healthCheckPath: /
+    plan: free
